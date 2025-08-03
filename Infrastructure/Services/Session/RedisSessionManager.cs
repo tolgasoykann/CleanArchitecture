@@ -7,7 +7,7 @@ using System.Text.Json;
 using System.Linq;
 using CleanArchitecture.Infrastructure.Interfaces;
 
-namespace CleanArchitecture.Infrastructure.Services.RedisSessionManager
+namespace Infrastructure.Services.Session
 {
     public class RedisSessionManager : ISessionManager
     {
@@ -22,7 +22,7 @@ namespace CleanArchitecture.Infrastructure.Services.RedisSessionManager
             _redisDatabase = redisConnection.GetDatabase();
             _httpContextAccessor = httpContextAccessor;
             // appsettings.json'dan oturum zaman aşımı süresini oku, bulamazsan varsayılan 20 dakika kullan.
-            _sessionTimeout = TimeSpan.FromMinutes(configuration.GetValue<int>("SessionSettings:TimeoutMinutes", 20));
+            _sessionTimeout = TimeSpan.FromMinutes(configuration.GetValue("SessionSettings:TimeoutMinutes", 20));
         }
 
         // SessionId'yi tarayıcıdan gelen cookie'den alıyoruz.

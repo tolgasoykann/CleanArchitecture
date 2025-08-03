@@ -3,9 +3,9 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using StackExchange.Redis;
 using CleanArchitecture.Infrastructure.Interfaces;
-using Infrastructure.Services.Session;
+using CleanArchitecture.Infrastructure.Services.RedisSessionManager;
 
-namespace Api.Extensions.Session
+namespace CleanArchitecture.Api.Extensions.HttpContextServiceRegistration
 {
     public static class HttpsContextServiceRegistration
     {

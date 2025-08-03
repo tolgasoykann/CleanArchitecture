@@ -2,9 +2,9 @@
 using Microsoft.Extensions.DependencyInjection;
 using StackExchange.Redis;
 using CleanArchitecture.Infrastructure.Interfaces;
-using CleanArchitecture.Infrastructure.Services.RedisSessionManager;
+using Infrastructure.Services.Session;
 
-namespace CleanArchitecture.Api.Extensions.RedisServiceRegistration
+namespace Api.Extensions.Session
 {
     public static class RedisServiceRegistration
     {

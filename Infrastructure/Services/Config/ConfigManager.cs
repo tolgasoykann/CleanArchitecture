@@ -1,4 +1,4 @@
-﻿using Infrastructure.Interfaces;
+﻿using Domain.Interfaces;
 using Microsoft.Extensions.Configuration;
 using System.Text.Json;
 

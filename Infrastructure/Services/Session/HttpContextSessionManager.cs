@@ -1,7 +1,6 @@
 ﻿using Microsoft.AspNetCore.Http;
 using System.Text.Json;
-using CleanArchitecture.Infrastructure.Interfaces;
-using Microsoft.AspNetCore.Http.Extensions;
+using CleanArchitecture.Domain.Interfaces;
 
 namespace Infrastructure.Services.Session;
 
@@ -17,7 +16,7 @@ public class HttpContextSessionManager : ISessionManager
     {
         _httpContextAccessor = httpContextAccessor;
     }
-
+    
     public string SessionId => Session?.Id ?? string.Empty;
 
     public T? Get<T>(string key)

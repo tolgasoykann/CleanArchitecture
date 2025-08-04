@@ -5,7 +5,7 @@ using StackExchange.Redis;
 using System; // <-- TimeSpan için gerekli
 using System.Text.Json;
 using System.Linq;
-using CleanArchitecture.Infrastructure.Interfaces;
+using CleanArchitecture.Domain.Interfaces;
 
 namespace Infrastructure.Services.Session
 {

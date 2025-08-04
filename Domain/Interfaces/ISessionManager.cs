@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace CleanArchitecture.Infrastructure.Interfaces
+namespace CleanArchitecture.Domain.Interfaces
 {
     public interface ISessionManager
     {

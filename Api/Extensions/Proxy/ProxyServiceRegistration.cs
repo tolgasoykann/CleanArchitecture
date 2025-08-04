@@ -1,8 +1,6 @@
-﻿using Infrastructure.Interfaces;
+﻿using Domain.Interfaces;
 using Infrastructure.Services.Proxy;
 using Microsoft.Extensions.DependencyInjection;
-
-
 
 namespace Api.Extensions.Proxy
 {

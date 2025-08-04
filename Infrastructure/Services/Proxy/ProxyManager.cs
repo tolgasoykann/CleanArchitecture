@@ -1,13 +1,9 @@
-﻿using CleanArchitecture.Infrastructure.Interfaces;
-using Infrastructure.Interfaces;
-using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using CleanArchitecture.Domain.Interfaces;
+using Domain.Interfaces;
 using System.Net.Http.Headers;
 using System.Net;
 using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
 
 namespace Infrastructure.Services.Proxy
 {
@@ -28,10 +24,8 @@ namespace Infrastructure.Services.Proxy
         {
             var request = new HttpRequestMessage(method, endpoint);
 
-            // Header'ları ekle
             AddHeaders(request, headers);
 
-            // Body varsa serialize et
             if (body is not null)
             {
                 var json = JsonSerializer.Serialize(body);
@@ -40,22 +34,27 @@ namespace Infrastructure.Services.Proxy
 
             try
             {
-                var response = await _httpClient.SendAsync(request);
+                using var response = await _httpClient.SendAsync(request);
                 response.EnsureSuccessStatusCode();
 
-                // No content ise boş dön
                 if (response.StatusCode == HttpStatusCode.NoContent)
                     return default;
 
                 var responseJson = await response.Content.ReadAsStringAsync();
-                return JsonSerializer.Deserialize<TResponse>(responseJson);
+
+                var options = new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                };
+                return JsonSerializer.Deserialize<TResponse>(responseJson, options);
             }
             catch (Exception ex)
             {
-                _logger.Error($"ProxyManager SendAsync error: {method} {endpoint}", ex);
+                _logger.Error($"ProxyManager SendAsync error: {method} {endpoint}. Exception: {ex}");
                 return default;
             }
         }
+
 
         private void AddHeaders(HttpRequestMessage request, Dictionary<string, string>? headers)
         {

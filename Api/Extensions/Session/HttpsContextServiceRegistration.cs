@@ -1,25 +1,21 @@
-﻿
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using StackExchange.Redis;
-using CleanArchitecture.Infrastructure.Interfaces;
+﻿using Microsoft.Extensions.DependencyInjection;
+using CleanArchitecture.Domain.Interfaces;
 using Infrastructure.Services.Session;
 
 namespace Api.Extensions.Session
 {
     public static class HttpsContextServiceRegistration
     {
-        public static IServiceCollection AddRedisSessionManager(this IServiceCollection services, IConfiguration configuration)
+        public static IServiceCollection AddHttpContextSessionManager(this IServiceCollection services)
         {
-            // Redis bağlantısını IConnectionMultiplexer olarak singleton kaydetmek kritiktir.
-            // Bu nesne pahalıdır ve uygulama boyunca tek bir tane olması gerekir.
-            var redisConnectionString = configuration.GetConnectionString("Redis");
-            services.AddSingleton<IConnectionMultiplexer>(ConnectionMultiplexer.Connect(redisConnectionString));
+            // HttpContext erişimi için gerekli accessor
+            services.AddHttpContextAccessor();
 
-            // Artık ISessionManager istendiğinde Redis implementasyonunu veriyoruz.
-            // IHttpContextAccessor zaten diğer projede kayıtlı olduğu için tekrar eklemeye gerek yok.
-            // Eğer diğer projeyi silecekseniz buraya AddHttpContextAccessor eklenmelidir.
-            services.AddScoped<ISessionManager, RedisSessionManager>();
+            // HttpContext tabanlı session manager
+            services.AddScoped<ISessionManager, HttpContextSessionManager>();
+
+            // Session servisini aktif etmek için (Program.cs içinde app.UseSession() kullanılmalı)
+            services.AddSession();
 
             return services;
         }

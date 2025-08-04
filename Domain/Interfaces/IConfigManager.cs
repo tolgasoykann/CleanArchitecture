@@ -1,6 +1,5 @@
-﻿using Microsoft.Extensions.Configuration;
-
-namespace Infrastructure.Interfaces
+﻿
+namespace Domain.Interfaces
 {
     public interface IConfigManager
     {

@@ -1,7 +1,7 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using StackExchange.Redis;
-using CleanArchitecture.Infrastructure.Interfaces;
+using CleanArchitecture.Domain.Interfaces;
 using Infrastructure.Services.Session;
 
 namespace Api.Extensions.Session

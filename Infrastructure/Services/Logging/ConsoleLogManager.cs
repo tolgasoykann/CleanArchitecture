@@ -1,5 +1,4 @@
-﻿using Infrastructure.Interfaces;
-using System;
+﻿using Domain.Interfaces;
 
 namespace Infrastructure.Services.Logging
 {

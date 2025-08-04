@@ -1,6 +1,6 @@
-﻿using Infrastructure.Services.Logging;
+using Domain.Interfaces; 
+using Infrastructure.Services.Logging;
 using Microsoft.Extensions.DependencyInjection;
-using Domain.Interfaces;
 
 namespace Api.Extensions.Logging
 {

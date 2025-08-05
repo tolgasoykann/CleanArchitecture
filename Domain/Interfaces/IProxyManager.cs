@@ -10,7 +10,7 @@ namespace Domain.Interfaces
     {
    
        Task<TResponse?> SendAsync<TResponse>(string endpoint, HttpMethod method, object? body = null, Dictionary<string, string>? headers = null);
-
+       Task<T?> GetAsync<T>(string endpoint);
     }
 
 }

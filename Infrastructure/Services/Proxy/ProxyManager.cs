@@ -3,7 +3,6 @@ using Domain.Interfaces;
 using System.Net.Http.Headers;
 using System.Net;
 using System.Text;
-using System.Text.Json;
 
 namespace Infrastructure.Services.Proxy
 {
@@ -12,12 +11,14 @@ namespace Infrastructure.Services.Proxy
         private readonly HttpClient _httpClient;
         private readonly ILogManager _logger;
         private readonly ISessionManager _sessionManager;
+        private readonly ICustomJsonSerializer _jsonSerializer;
 
-        public ProxyManager(HttpClient httpClient, ILogManager logger, ISessionManager sessionManager)
+        public ProxyManager(HttpClient httpClient, ILogManager logger, ISessionManager sessionManager, ICustomJsonSerializer jsonSerializer)
         {
             _httpClient = httpClient;
             _logger = logger;
             _sessionManager = sessionManager;
+            _jsonSerializer = jsonSerializer;
         }
 
         public async Task<TResponse?> SendAsync<TResponse>(string endpoint, HttpMethod method, object? body = null, Dictionary<string, string>? headers = null)
@@ -28,7 +29,7 @@ namespace Infrastructure.Services.Proxy
 
             if (body is not null)
             {
-                var json = JsonSerializer.Serialize(body);
+                var json = _jsonSerializer.Serialize(body);
                 request.Content = new StringContent(json, Encoding.UTF8, "application/json");
             }
 
@@ -41,12 +42,7 @@ namespace Infrastructure.Services.Proxy
                     return default;
 
                 var responseJson = await response.Content.ReadAsStringAsync();
-
-                var options = new JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true
-                };
-                return JsonSerializer.Deserialize<TResponse>(responseJson, options);
+                return _jsonSerializer.Deserialize<TResponse>(responseJson);
             }
             catch (Exception ex)
             {
@@ -55,10 +51,8 @@ namespace Infrastructure.Services.Proxy
             }
         }
 
-
         private void AddHeaders(HttpRequestMessage request, Dictionary<string, string>? headers)
         {
-            // Varsayılan Authorization header (opsiyonel)
             var token = _sessionManager.Get<string>("AccessToken");
             if (!string.IsNullOrEmpty(token))
             {
@@ -73,6 +67,11 @@ namespace Infrastructure.Services.Proxy
                 }
             }
         }
+        public async Task<T?> GetAsync<T>(string endpoint)
+        {
+            return await SendAsync<T>(endpoint, HttpMethod.Get);
+        }
+
 
     }
 

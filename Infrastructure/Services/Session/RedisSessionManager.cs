@@ -2,10 +2,8 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration; // <-- GetValue için gerekli
 using StackExchange.Redis;
-using System; // <-- TimeSpan için gerekli
-using System.Text.Json;
-using System.Linq;
 using CleanArchitecture.Domain.Interfaces;
+using Domain.Interfaces;
 
 namespace Infrastructure.Services.Session
 {
@@ -15,14 +13,16 @@ namespace Infrastructure.Services.Session
         private readonly IDatabase _redisDatabase;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly TimeSpan _sessionTimeout;
+        private readonly ICustomJsonSerializer _jsonSerializer;
 
-        public RedisSessionManager(IConnectionMultiplexer redisConnection, IHttpContextAccessor httpContextAccessor, IConfiguration configuration)
+        public RedisSessionManager(IConnectionMultiplexer redisConnection, IHttpContextAccessor httpContextAccessor, IConfiguration configuration, ICustomJsonSerializer customJsonSerializer)
         {
             _redisConnection = redisConnection;
             _redisDatabase = redisConnection.GetDatabase();
             _httpContextAccessor = httpContextAccessor;
             // appsettings.json'dan oturum zaman aşımı süresini oku, bulamazsan varsayılan 20 dakika kullan.
             _sessionTimeout = TimeSpan.FromMinutes(configuration.GetValue("SessionSettings:TimeoutMinutes", 20));
+            _jsonSerializer = customJsonSerializer;
         }
 
         // SessionId'yi tarayıcıdan gelen cookie'den alıyoruz.
@@ -56,13 +56,13 @@ namespace Infrastructure.Services.Session
             if (redisValue.IsNullOrEmpty)
                 return default;
 
-            return JsonSerializer.Deserialize<T>(redisValue.ToString());
+            return _jsonSerializer.Deserialize<T>(redisValue.ToString());
         }
 
         public void Set<T>(string key, T value)
         {
             var redisKey = GetRedisKey(key);
-            var jsonValue = JsonSerializer.Serialize(value);
+            var jsonValue = _jsonSerializer.Serialize(value);
             _redisDatabase.StringSet(redisKey, jsonValue, _sessionTimeout);
         }
 

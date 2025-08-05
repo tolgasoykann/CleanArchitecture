@@ -1,14 +1,12 @@
 ﻿using Domain.Interfaces;
 using Microsoft.AspNetCore.Mvc;
-using System.Net.NetworkInformation;
 using Infrastructure.Services.Proxy;
 
 
 namespace WebApi.Controllers
 {
 
-namespace WebApi.Controllers
-    {
+    
         [ApiController]
         [Route("api/[controller]")]
         public class TestProxyController : ControllerBase
@@ -41,6 +39,6 @@ namespace WebApi.Controllers
             public string Title { get; set; } = string.Empty;
             public string Body { get; set; } = string.Empty;
         }
-    }
+    
 
 }

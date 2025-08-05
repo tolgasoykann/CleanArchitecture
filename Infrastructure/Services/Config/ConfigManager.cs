@@ -1,6 +1,5 @@
 ﻿using Domain.Interfaces;
 using Microsoft.Extensions.Configuration;
-using System.Text.Json;
 
 namespace Infrastructure.Services.Config
 {
@@ -21,8 +20,7 @@ namespace Infrastructure.Services.Config
         public T Get<T>(string key)
         {
             var value = _configuration[key];
-            return value is null ? default! : JsonSerializer.Deserialize<T>(value)!;
+            return string.IsNullOrEmpty(value) ? default : (T)Convert.ChangeType(value, typeof(T));
         }
     }
-
 }

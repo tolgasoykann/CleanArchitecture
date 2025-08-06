@@ -21,8 +21,10 @@ public class HttpContextSessionManager : ISessionManager
         _httpContextAccessor = httpContextAccessor;
         _jsonSerializer = customJsonSerializer;
     }
-    
-    public string SessionId => Session?.Id ?? string.Empty;
+
+    public string SessionId => _httpContextAccessor.HttpContext?.Session?.Id ?? string.Empty;
+
+
 
     public T? Get<T>(string key) 
     {

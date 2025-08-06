@@ -50,7 +50,7 @@ HTTP Request
 
 POST http://localhost:5000/api/testredis/set?key=myKey&value=myValue
 
-GET http://localhost:5000/api/testredis/get?key=myKey
+GET http://localhost:5000/api/testredis/set?key=myKey&value=myValue
 
 DELETE http://localhost:5000/api/testredis/remove?key=myKey
 

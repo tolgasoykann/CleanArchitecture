@@ -1,9 +1,6 @@
-﻿using Microsoft.AspNetCore.Http;
-using Infrastructure.Services.JsonSerializer;
-    
+﻿using Microsoft.AspNetCore.Http;    
 using CleanArchitecture.Domain.Interfaces;
 using Domain.Interfaces;
-
 
 namespace Infrastructure.Services.Session;
 

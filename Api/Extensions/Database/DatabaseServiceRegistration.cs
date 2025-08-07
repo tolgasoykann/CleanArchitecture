@@ -1,27 +1,32 @@
-﻿using Infrastructure.Services.Database;
+﻿using Domain.Interfaces;
+using Infrastructure.Services.Database;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace Api.Extensions.Database
+public static class DatabaseRegistration
 {
-    public static class ServiceRegistration
+    public static IServiceCollection AddDatabaseManager(this IServiceCollection services, string type)
     {
-        public static IServiceCollection AddDatabaseManager(this IServiceCollection services, IConfiguration configuration)
+        switch (type.ToLower())
         {
-            // Connection string kayıt ediliyor
-            var connectionString = configuration.GetConnectionString("DefaultConnection");
-
-            // Dapper ile çalışan custom bir manager servis ekleniyor
-            services.AddScoped<IDbConnectionFactory>(_ => new SqlConnectionFactory(connectionString));
-           // services.AddScoped<ICustomerRepository, CustomerRepository>(); // örnek repository
-
-            return services;
+            case "sql":
+            case "sqlclient":
+                services.AddScoped<IDatabaseManager, SqlDatabaseManager>();
+                break;
+            case "dapper":
+                services.AddScoped<IDatabaseManager, DapperDatabaseManager>();
+                break;
+            case "mongo":
+                services.AddScoped<IDatabaseManager, MongoDatabaseManager>();
+                break;
+            case "redis":
+                services.AddScoped<IDatabaseManager, RedisDatabaseManager>();
+                break;
+            default:
+                throw new InvalidOperationException($"Unsupported database type: {type}");
         }
+
+        return services;
     }
 
 }

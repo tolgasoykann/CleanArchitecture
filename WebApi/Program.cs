@@ -1,5 +1,4 @@
 using Api.Extensions.Config;
-using Api.Extensions.Logging;
 using Api.Extensions.Proxy;
 using Api.Extensions.Resilience;
 using Api.Extensions.Session;
@@ -10,7 +9,6 @@ using Microsoft.AspNetCore.RateLimiting;
 using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
-
 builder.Services.AddControllers();
     
 builder.Services.AddEndpointsApiExplorer();
@@ -18,11 +16,21 @@ builder.Services.AddSwaggerGen();
 // Custom service registrations
 builder.Services.AddProxyManager();
 builder.Services.AddConfigManager();
-builder.Services.AddLoggingManager();
+builder.Services.AddSingleton<IFeatureToggleService, FeatureToggleService>();
+
+var tempProvider = builder.Services.BuildServiceProvider();
+var featureToggle = tempProvider.GetRequiredService<IFeatureToggleService>();
+var dbType = featureToggle.GetDatabaseProvider();
+builder.Services.AddDatabaseManager(dbType);
+//builder.Services.AddLoggingManager("console");
+//builder.Services.AddLoggingManager("file");
+builder.Services.AddLoggingManager("composite");
 builder.Services.AddHttpContextSessionManager();
 builder.Services.AddResilienceServiceRegistration();
 builder.Services.AddRedisSessionManager(builder.Configuration);
 builder.Services.AddSingleton<ICustomJsonSerializer, CustomJsonSerializer>();
+builder.Services.AddSingleton<IFeatureToggleService, FeatureToggleService>();
+
 builder.Services.AddRateLimiter(options =>
 {
     options.AddFixedWindowLimiter("default", opt =>

@@ -3,14 +3,17 @@ using Api.Extensions.Proxy;
 using Api.Extensions.Resilience;
 using Api.Extensions.Session;
 using Domain.Interfaces;
+using Infrastructure.Middleware;
+using Infrastructure.Services.HealthCheck;
 using Infrastructure.Services.JsonSerializer;
 using Infrastructure.Services.Proxy;
+using Infrastructure.Services.Session;
 using Microsoft.AspNetCore.RateLimiting;
 using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
-    
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 // Custom service registrations
@@ -30,6 +33,10 @@ builder.Services.AddResilienceServiceRegistration();
 builder.Services.AddRedisSessionManager(builder.Configuration);
 builder.Services.AddSingleton<ICustomJsonSerializer, CustomJsonSerializer>();
 builder.Services.AddSingleton<IFeatureToggleService, FeatureToggleService>();
+builder.Services.AddSingleton<ISessionContextAccessor, SessionContextAccessor>();
+builder.Services.AddSingleton<ILogManager, TraceIdAwareLogManager>();
+
+
 
 builder.Services.AddRateLimiter(options =>
 {
@@ -63,7 +70,12 @@ builder.Services.AddSession(options =>
     options.Cookie.IsEssential = true;
 });
 
+
+
 var app = builder.Build();
+
+
+await HealthCheckStartup.CheckAllManagersHealthAsync(app.Services);
 
 if (app.Environment.IsDevelopment())
 {
@@ -72,6 +84,9 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.UseMiddleware<TraceIdMiddleware>();
+
 
 app.UseSession();
 

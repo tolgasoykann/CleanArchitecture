@@ -1,42 +1,50 @@
 ﻿using Domain.Interfaces;
+using Microsoft.AspNetCore.Http;
+                
+
 
 namespace Infrastructure.Services.Logging
 {
-    public class FileLogManager : ILogManager
+    public class FileLogManager : BaseLogManager
     {
         private readonly string _logFilePath;
+        private static readonly object _lock = new object();
 
-        public FileLogManager()
+
+        public FileLogManager(IHttpContextAccessor httpContextAccessor)
+            : base(httpContextAccessor)
         {
-            var logDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Logs");
-            if (!Directory.Exists(logDirectory))
+            // Logları projenin ana klasöründeki "logs" dizinine kaydediyoruz.
+            var logDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "logs");
+            if (!Directory.Exists(logDir))
             {
-                Directory.CreateDirectory(logDirectory);
+                Directory.CreateDirectory(logDir);
             }
-
-            _logFilePath = Path.Combine(logDirectory, $"log_{DateTime.UtcNow:yyyyMMdd}.txt");
+            _logFilePath = Path.Combine(logDir, "logs.txt");
+        }
+        public override void Info(string message)
+        {
+            lock (_lock)
+            {
+                File.AppendAllText(_logFilePath, $"[INFO] [TraceId: {GetTraceId()}] {message}{Environment.NewLine}");
+            }
         }
 
-        public void Info(string message)
+        public override void Error(string message, Exception ex = null)
         {
-            WriteLog("INFO", message);
+            lock (_lock)
+            {
+                File.AppendAllText(_logFilePath, $"[ERROR] [TraceId: {GetTraceId()}] {message} {ex?.Message}{Environment.NewLine}");
+            }
         }
 
-        public void Warning(string message)
+        public override void Warning(string message)
         {
-            WriteLog("WARN", message);
-        }
-
-        public void Error(string message, Exception? ex = null)
-        {
-            var fullMessage = ex == null ? message : $"{message} | Exception: {ex.Message} | StackTrace: {ex.StackTrace}";
-            WriteLog("ERROR", fullMessage);
-        }
-
-        private void WriteLog(string level, string message)
-        {
-            var logLine = $"{DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} [{level}] {message}";
-            File.AppendAllText(_logFilePath, logLine + Environment.NewLine);
+            lock (_lock)
+            {
+                File.AppendAllText(_logFilePath, $"[WARN] [TraceId: {GetTraceId()}] {message}{Environment.NewLine}");
+            }
+           
         }
     }
 }

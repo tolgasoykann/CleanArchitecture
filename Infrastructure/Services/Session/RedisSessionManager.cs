@@ -1,38 +1,100 @@
-﻿
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Configuration; // <-- GetValue için gerekli
-using StackExchange.Redis;
-using CleanArchitecture.Domain.Interfaces;
+﻿using CleanArchitecture.Domain.Interfaces;
 using Domain.Interfaces;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Configuration;
+using StackExchange.Redis;
+using System;
+using System.Diagnostics;
+using System.Linq;
 
 namespace Infrastructure.Services.Session
 {
     public class RedisSessionManager : ISessionManager
     {
-        private readonly IConnectionMultiplexer _redisConnection; // <-- Clear() metodu için bunu kullanacağız
         private readonly IDatabase _redisDatabase;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly TimeSpan _sessionTimeout;
         private readonly ICustomJsonSerializer _jsonSerializer;
+        private readonly ILogManager _logManager;
+        private readonly ISessionContextAccessor _sessionContextAccessor;
+        private readonly IConnectionMultiplexer _redisConnection;
 
-        public RedisSessionManager(IConnectionMultiplexer redisConnection, IHttpContextAccessor httpContextAccessor, IConfiguration configuration, ICustomJsonSerializer customJsonSerializer)
+        public RedisSessionManager(
+            IConnectionMultiplexer redisConnection,
+            IHttpContextAccessor httpContextAccessor,
+            IConfiguration configuration,
+            ICustomJsonSerializer customJsonSerializer,
+            ILogManager logManager,
+            ISessionContextAccessor sessionContextAccessor)
         {
             _redisConnection = redisConnection;
             _redisDatabase = redisConnection.GetDatabase();
             _httpContextAccessor = httpContextAccessor;
-            // appsettings.json'dan oturum zaman aşımı süresini oku, bulamazsan varsayılan 20 dakika kullan.
             _sessionTimeout = TimeSpan.FromMinutes(configuration.GetValue("SessionSettings:TimeoutMinutes", 20));
             _jsonSerializer = customJsonSerializer;
+            _logManager = logManager;
+            _sessionContextAccessor = sessionContextAccessor;
         }
 
-        // SessionId'yi tarayıcıdan gelen cookie'den alıyoruz.
-        // Eğer cookie yoksa, yeni bir tane oluşturup yanıta ekliyoruz.
+        public T? Get<T>(string key)
+        {
+            var redisKey = GetRedisKey(key);
+            _logManager.Info($"[TraceId: {_sessionContextAccessor.TraceId}] RedisSessionManager -> Get called with key: {redisKey}");
+
+            var redisValue = _redisDatabase.StringGet(redisKey);
+
+            if (redisValue.IsNullOrEmpty)
+            {
+                _logManager.Warning($"[TraceId: {_sessionContextAccessor.TraceId}] Key not found in Redis: {redisKey}");
+                return default;
+            }
+
+            var result = _jsonSerializer.Deserialize<T>(redisValue.ToString());
+            _logManager.Info($"[TraceId: {_sessionContextAccessor.TraceId}] Deserialized value for key {redisKey}");
+
+            return result;
+        }
+
+        public void Set<T>(string key, T value)
+        {
+            var redisKey = GetRedisKey(key);
+            var jsonValue = _jsonSerializer.Serialize(value);
+
+            _redisDatabase.StringSet(redisKey, jsonValue, _sessionTimeout);
+            _logManager.Info($"[TraceId: {_sessionContextAccessor.TraceId}] RedisSessionManager -> Set key: {redisKey}, timeout: {_sessionTimeout.TotalMinutes} minutes");
+        }
+
+        public void Remove(string key)
+        {
+            var redisKey = GetRedisKey(key);
+            _redisDatabase.KeyDelete(redisKey);
+            _logManager.Info($"[TraceId: {_sessionContextAccessor.TraceId}] RedisSessionManager -> Removed key: {redisKey}");
+        }
+
+        public void Clear()
+        {
+            var pattern = $"session:{SessionId}:*";
+            var server = _redisConnection.GetServer(_redisConnection.GetEndPoints().First());
+            var sessionKeys = server.Keys(_redisDatabase.Database, pattern: pattern).ToArray();
+
+            if (sessionKeys.Length > 0)
+            {
+                _redisDatabase.KeyDelete(sessionKeys);
+                _logManager.Info($"[TraceId: {_sessionContextAccessor.TraceId}] RedisSessionManager -> Cleared {sessionKeys.Length} keys for session: {SessionId}");
+            }
+            else
+            {
+                _logManager.Info($"[TraceId: {_sessionContextAccessor.TraceId}] RedisSessionManager -> No keys to clear for session: {SessionId}");
+            }
+        }
+
         public string SessionId
         {
             get
             {
                 var cookieName = "RedisSessionId";
                 var sessionId = _httpContextAccessor.HttpContext?.Request.Cookies[cookieName];
+
                 if (string.IsNullOrEmpty(sessionId))
                 {
                     sessionId = Guid.NewGuid().ToString();
@@ -41,56 +103,14 @@ namespace Infrastructure.Services.Session
                         HttpOnly = true,
                         Expires = DateTime.UtcNow.Add(_sessionTimeout)
                     });
+
+                    _logManager.Info($"[TraceId: {_sessionContextAccessor.TraceId}] RedisSessionManager -> New sessionId generated: {sessionId}");
                 }
+
                 return sessionId;
             }
         }
 
         private string GetRedisKey(string key) => $"session:{SessionId}:{key}";
-
-        public T? Get<T>(string key)
-        {
-            var redisKey = GetRedisKey(key);
-            var redisValue = _redisDatabase.StringGet(redisKey);
-
-            if (redisValue.IsNullOrEmpty)
-                return default;
-
-            return _jsonSerializer.Deserialize<T>(redisValue.ToString());
-        }
-
-        public void Set<T>(string key, T value)
-        {
-            var redisKey = GetRedisKey(key);
-            var jsonValue = _jsonSerializer.Serialize(value);
-            _redisDatabase.StringSet(redisKey, jsonValue, _sessionTimeout);
-        }
-
-        public void Remove(string key)
-        {
-            var redisKey = GetRedisKey(key);
-            _redisDatabase.KeyDelete(redisKey);
-        }
-
-        public void Clear()
-        {
-            // Bağlı olduğumuz Redis sunucusunu alıyoruz.
-            var server = _redisConnection.GetServer(_redisConnection.GetEndPoints().First());
-
-            // Mevcut oturum kimliğine ait tüm anahtarları bulmak için bir desen (pattern) oluşturuyoruz.
-            // Örn: "session:abc-123-def-456:*"
-            var pattern = $"session:{SessionId}:*";
-
-            // Sunucudaki anahtarları, sunucuyu kilitlemeden (SCAN komutu ile) tarıyoruz
-            // ve desenimize uyanları bir diziye atıyoruz.
-            var sessionKeys = server.Keys(database: _redisDatabase.Database, pattern: pattern).ToArray();
-
-            // Eğer silinecek anahtar bulunduysa, hepsini tek seferde siliyoruz.
-            if (sessionKeys.Length > 0)
-            {
-                _redisDatabase.KeyDelete(sessionKeys);
-            }
-
-        }
     }
 }

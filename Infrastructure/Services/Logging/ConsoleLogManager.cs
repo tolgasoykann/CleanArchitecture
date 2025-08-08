@@ -1,31 +1,33 @@
 ﻿using Domain.Interfaces;
+using Microsoft.AspNetCore.Http;
 
 namespace Infrastructure.Services.Logging
 {
-    public class ConsoleLogManager : ILogManager
+    
+    public class ConsoleLogManager : BaseLogManager
     {
-        public void Info(string message)
+        public ConsoleLogManager(IHttpContextAccessor httpContextAccessor) : base(httpContextAccessor) { }
+
+        public override void Info(string message)
         {
-            WriteLog("INFO", message, ConsoleColor.Green);
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.WriteLine($"[INFO] [TraceId: {GetTraceId()}] {message}");
+            Console.ResetColor();
         }
 
-        public void Warning(string message)
+        public override void Error(string message, Exception ex = null)
         {
-            WriteLog("WARN", message, ConsoleColor.Yellow);
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.WriteLine($"[ERROR] [TraceId: {GetTraceId()}] {message} {ex?.Message}");
+            Console.ResetColor();
         }
 
-        public void Error(string message, Exception? ex = null)
+        public override void Warning(string message)
         {
-            var fullMessage = ex == null ? message : $"{message} | Exception: {ex.Message} | StackTrace: {ex.StackTrace}";
-            WriteLog("ERROR", fullMessage, ConsoleColor.Red);
-        }
-
-        private void WriteLog(string level, string message, ConsoleColor color)
-        {
-            var originalColor = Console.ForegroundColor;
-            Console.ForegroundColor = color;
-            Console.WriteLine($"{DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} [{level}] {message}");
-            Console.ForegroundColor = originalColor;
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.WriteLine($"[WARN] [TraceId: {GetTraceId()}] {message}");
+            Console.ResetColor();
         }
     }
+
 }

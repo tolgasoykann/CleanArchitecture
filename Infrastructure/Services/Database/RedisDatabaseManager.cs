@@ -1,7 +1,7 @@
 ﻿using Domain.Interfaces;
 using Microsoft.Extensions.Configuration;
 using StackExchange.Redis;
-using System.Text.Json;
+
 
 namespace Infrastructure.Services.Database
 {
@@ -9,12 +9,17 @@ namespace Infrastructure.Services.Database
     {
         private readonly IDatabase _redisDb;
         private readonly ICustomJsonSerializer _customJsonSerializer;
+        private readonly ILogManager _logManager;
+        private readonly IConnectionMultiplexer _redis;
 
-        public RedisDatabaseManager(IConfiguration configuration, ICustomJsonSerializer customJsonSerializer)
+
+        public RedisDatabaseManager(IConfiguration configuration, ICustomJsonSerializer customJsonSerializer, ILogManager logManager,IConnectionMultiplexer connectionMultiplexer)
         {
             var redis = ConnectionMultiplexer.Connect(configuration.GetConnectionString("Redis"));
             _redisDb = redis.GetDatabase();
             _customJsonSerializer = customJsonSerializer;
+            _logManager = logManager;
+            _redis = connectionMultiplexer;
         }
 
         public async Task<IEnumerable<T>> QueryAsync<T>(string key, object? parameters = null)
@@ -30,5 +35,22 @@ namespace Infrastructure.Services.Database
             await _redisDb.StringSetAsync(key, json);
             return 1;
         }
+
+        public async Task<bool> CheckHealthAsync()
+        {
+            try
+            {
+                var db = _redis.GetDatabase();
+                var pong = await db.PingAsync();
+                _logManager.Info($"Redis ping: {pong.TotalMilliseconds}ms");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logManager.Error("RedisSessionManager health check failed", ex);
+                return false;
+            }
+        }
+
     }
 }

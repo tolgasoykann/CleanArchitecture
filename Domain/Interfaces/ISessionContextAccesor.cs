@@ -6,7 +6,8 @@ using System.Threading.Tasks;
 
 namespace Domain.Interfaces
 {
-    internal interface IDatabaseExecutor
+    public interface ISessionContextAccessor
     {
+        string TraceId { get; }
     }
 }

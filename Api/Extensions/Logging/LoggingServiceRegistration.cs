@@ -1,11 +1,15 @@
 ﻿using Domain.Interfaces;
 using Infrastructure.Services.Logging;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 
 public static class LoggingServiceRegistration
 {
     public static IServiceCollection AddLoggingManager(this IServiceCollection services, string loggerType)
     {
+      
+        services.AddHttpContextAccessor();
+
         if (loggerType == "console")
         {
             services.AddSingleton<ILogManager, ConsoleLogManager>();
@@ -16,13 +20,11 @@ public static class LoggingServiceRegistration
         }
         else if (loggerType == "composite")
         {
-            // 1. Console ve File logger'ları ayrı kaydet
+            // Önce bağımsız olarak ekle
             services.AddSingleton<ConsoleLogManager>();
             services.AddSingleton<FileLogManager>();
 
-            // 2. ILogManager olarak bu ikisini tek tek kaydetme!
-            // 3. CompositeLogManager içerisine açıkça gönder
-
+            // Sonra composite yap
             services.AddSingleton<ILogManager>(sp =>
             {
                 var loggers = new List<ILogManager>
@@ -30,8 +32,10 @@ public static class LoggingServiceRegistration
                     sp.GetRequiredService<ConsoleLogManager>(),
                     sp.GetRequiredService<FileLogManager>()
                 };
+                var httpContextAccessor = sp.GetRequiredService<IHttpContextAccessor>();
 
-                return new CompositeLogManager(loggers);
+
+                return new CompositeLogManager(loggers,httpContextAccessor);
             });
         }
 

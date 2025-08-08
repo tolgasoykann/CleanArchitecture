@@ -14,13 +14,17 @@ namespace Infrastructure.Services.Config
 
         public string Get(string key)
         {
-            return _configuration[key];
+            return _configuration[key] ?? string.Empty;
         }
 
         public T Get<T>(string key)
         {
-            var value = _configuration[key];
-            return string.IsNullOrEmpty(value) ? default : (T)Convert.ChangeType(value, typeof(T));
+            return _configuration.GetValue<T>(key);
+        }
+
+        public string? GetConnectionString(string name)
+        {
+            return _configuration.GetConnectionString(name);
         }
     }
 }

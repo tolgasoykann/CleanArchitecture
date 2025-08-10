@@ -34,7 +34,7 @@ builder.Services.AddRedisSessionManager(builder.Configuration);
 builder.Services.AddSingleton<ICustomJsonSerializer, CustomJsonSerializer>();
 builder.Services.AddSingleton<IFeatureToggleService, FeatureToggleService>();
 builder.Services.AddSingleton<ISessionContextAccessor, SessionContextAccessor>();
-builder.Services.AddSingleton<ILogManager, TraceIdAwareLogManager>();
+
 
 
 

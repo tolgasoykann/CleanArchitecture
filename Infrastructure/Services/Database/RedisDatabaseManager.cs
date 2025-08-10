@@ -5,7 +5,7 @@ using StackExchange.Redis;
 
 namespace Infrastructure.Services.Database
 {
-    public class RedisDatabaseManager : IDatabaseManager
+    public class RedisDatabaseManager : IDatabaseManager , IHealthCheckable
     {
         private readonly IDatabase _redisDb;
         private readonly ICustomJsonSerializer _customJsonSerializer;
@@ -13,13 +13,15 @@ namespace Infrastructure.Services.Database
         private readonly IConnectionMultiplexer _redis;
 
 
-        public RedisDatabaseManager(IConfiguration configuration, ICustomJsonSerializer customJsonSerializer, ILogManager logManager,IConnectionMultiplexer connectionMultiplexer)
+        public RedisDatabaseManager(IConfiguration configuration, ICustomJsonSerializer customJsonSerializer, ILogManager logManager, IConnectionMultiplexer connectionMultiplexer)
         {
-            var redis = ConnectionMultiplexer.Connect(configuration.GetConnectionString("Redis"));
-            _redisDb = redis.GetDatabase();
+            // DI ile gelen ConnectionMultiplexer'ı kullanıyoruz.
+            _redis = connectionMultiplexer;
+            _redisDb = _redis.GetDatabase();
+
+            // Diğer bağımlılıklar
             _customJsonSerializer = customJsonSerializer;
             _logManager = logManager;
-            _redis = connectionMultiplexer;
         }
 
         public async Task<IEnumerable<T>> QueryAsync<T>(string key, object? parameters = null)

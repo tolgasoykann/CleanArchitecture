@@ -3,21 +3,23 @@ using Domain.Interfaces;
 using System.Net.Http.Headers;
 using System.Net;
 using System.Text;
+using System;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Infrastructure.Services.Proxy
 {
-    public class ProxyManager : IProxyManager
+    public class ProxyManager : IProxyManager, IHealthCheckable
     {
         private readonly HttpClient _httpClient;
         private readonly ILogManager _logger;
-        private readonly ISessionManager _sessionManager;
+        private readonly IServiceProvider _serviceProvider;
         private readonly ICustomJsonSerializer _jsonSerializer;
 
-        public ProxyManager(HttpClient httpClient, ILogManager logger, ISessionManager sessionManager, ICustomJsonSerializer jsonSerializer)
+        public ProxyManager(HttpClient httpClient, ILogManager logger, IServiceProvider serviceProvider, ICustomJsonSerializer jsonSerializer)
         {
             _httpClient = httpClient;
             _logger = logger;
-            _sessionManager = sessionManager;
+            _serviceProvider = serviceProvider;
             _jsonSerializer = jsonSerializer;
         }
 
@@ -56,7 +58,12 @@ namespace Infrastructure.Services.Proxy
 
         private void AddHeaders(HttpRequestMessage request, Dictionary<string, string>? headers)
         {
-            var token = _sessionManager.Get<string>("AccessToken");
+            // Bir scope oluşturun.
+            using var scope = _serviceProvider.CreateScope();
+            // Scope'tan ISessionManager servisini alın.
+            var sessionManager = scope.ServiceProvider.GetRequiredService<ISessionManager>();
+            // sessionManager üzerinden Get metodunu çağırın.
+            var token = sessionManager.Get<string>("AccessToken");
             if (!string.IsNullOrEmpty(token))
             {
                 request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
@@ -77,7 +84,40 @@ namespace Infrastructure.Services.Proxy
             return await SendAsync<T>(endpoint, HttpMethod.Get);
         }
 
+        public async Task<bool> CheckHealthAsync()
+        {
+            // Sağlık kontrolü için kullanılacak hedef URL'i buraya yazın
+            // Örneğin, proxy'nin genellikle eriştiği bir servisin ana adresi
+            var healthCheckEndpoint = "https://jsonplaceholder.typicode.com/posts/{id}";
 
+            // Not: Bu URL'in doğru olduğunu varsayıyoruz. 
+            // Gerçek uygulamada, bu URL'i konfigürasyondan almalısınız.
+
+            _logger.Info("ProxyManager sağlık kontrolü başlatılıyor.");
+
+            try
+            {
+                // Başarılı bir istek, servisin ayakta olduğunu gösterir.
+                var response = await _httpClient.GetAsync(healthCheckEndpoint);
+
+                // Sadece 200 (OK) durumunu değil, başarılı sayılan tüm durum kodlarını kontrol edebilirsiniz.
+                if (response.IsSuccessStatusCode)
+                {
+                    _logger.Info($"ProxyManager sağlık kontrolü başarılı. Durum kodu: {response.StatusCode}");
+                    return true;
+                }
+                else
+                {
+                    _logger.Warning($"ProxyManager sağlık kontrolü başarısız. Durum kodu: {response.StatusCode}");
+                    return false;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.Error("ProxyManager sağlık kontrolü sırasında hata oluştu.", ex);
+                return false;
+            }
+        }
     }
 
 }

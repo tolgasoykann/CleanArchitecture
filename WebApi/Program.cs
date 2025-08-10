@@ -4,6 +4,7 @@ using Api.Extensions.Resilience;
 using Api.Extensions.Session;
 using Domain.Interfaces;
 using Infrastructure.Middleware;
+using Infrastructure.Services.Database;
 using Infrastructure.Services.HealthCheck;
 using Infrastructure.Services.JsonSerializer;
 using Infrastructure.Services.Proxy;
@@ -12,6 +13,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
+
 builder.Services.AddControllers();
 
 builder.Services.AddEndpointsApiExplorer();
@@ -25,12 +27,14 @@ var tempProvider = builder.Services.BuildServiceProvider();
 var featureToggle = tempProvider.GetRequiredService<IFeatureToggleService>();
 var dbType = featureToggle.GetDatabaseProvider();
 builder.Services.AddDatabaseManager(dbType);
+builder.Services.AddSingleton<IHealthCheckable, DatabaseManager>();
+
 //builder.Services.AddLoggingManager("console");
 //builder.Services.AddLoggingManager("file");
 builder.Services.AddLoggingManager("composite");
 builder.Services.AddHttpContextSessionManager();
 builder.Services.AddResilienceServiceRegistration();
-builder.Services.AddRedisSessionManager(builder.Configuration);
+
 builder.Services.AddSingleton<ICustomJsonSerializer, CustomJsonSerializer>();
 builder.Services.AddSingleton<IFeatureToggleService, FeatureToggleService>();
 builder.Services.AddSingleton<ISessionContextAccessor, SessionContextAccessor>();
@@ -60,6 +64,8 @@ builder.Services.AddStackExchangeRedisCache(options =>
 {
     options.Configuration = builder.Configuration.GetConnectionString("Redis");
 });
+builder.Services.AddRedisSessionManager(builder.Configuration);
+builder.Services.AddSingleton<IHealthCheckable, RedisDatabaseManager>();
 
 // Session middleware config
 builder.Services.AddSession(options =>

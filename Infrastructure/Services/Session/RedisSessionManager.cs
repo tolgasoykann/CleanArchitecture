@@ -9,7 +9,7 @@ using System.Linq;
 
 namespace Infrastructure.Services.Session
 {
-    public class RedisSessionManager : ISessionManager
+    public class RedisSessionManager : ISessionManager, IHealthCheckable
     {
         private readonly IDatabase _redisDatabase;
         private readonly IHttpContextAccessor _httpContextAccessor;
@@ -108,6 +108,31 @@ namespace Infrastructure.Services.Session
                 }
 
                 return sessionId;
+            }
+
+        }
+        public async Task<bool> CheckHealthAsync()
+        {
+            try
+            {
+                // Redis'e bir ping atarak bağlantının durumunu kontrol ediyoruz.
+                await _redisConnection.GetDatabase().PingAsync();
+
+                // ConnectionMultiplexer'ın bağlantı durumunu da kontrol edebiliriz.
+                bool isConnected = _redisConnection.IsConnected;
+                if (!isConnected)
+                {
+                    _logManager.Error("Redis connection is not connected.");
+                    return false;
+                }
+
+                _logManager.Info("Redis health check: OK");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logManager.Error("RedisSessionManager health check failed", ex);
+                return false;
             }
         }
 

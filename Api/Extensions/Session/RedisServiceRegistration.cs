@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using StackExchange.Redis;
 using CleanArchitecture.Domain.Interfaces;
 using Infrastructure.Services.Session;
+using Domain.Interfaces;
 
 namespace Api.Extensions.Session
 {
@@ -19,7 +20,12 @@ namespace Api.Extensions.Session
             // IHttpContextAccessor zaten diğer projede kayıtlı olduğu için tekrar eklemeye gerek yok.
             // Eğer diğer projeyi silecekseniz buraya AddHttpContextAccessor eklenmelidir.
             services.AddScoped<ISessionManager, RedisSessionManager>();
+            // RedisSessionManager'ı IHealthCheckable olarak da kaydedin.
+            // Bu, HealthCheckStartup sınıfının onu bulmasını sağlar.
+            // Scoped olarak kaydedilen bir servisi, yine Scoped olarak kaydetmelisiniz.
+            services.AddScoped<IHealthCheckable, RedisSessionManager>();
 
+            return services;
             return services;
         }
     }

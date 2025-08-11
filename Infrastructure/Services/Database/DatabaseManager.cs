@@ -1,12 +1,7 @@
 ﻿using Domain.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Driver.Core.Configuration;
-using System;
-using System.Collections.Generic;
 using System.Data.SqlClient;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Infrastructure.Services.Database
 {

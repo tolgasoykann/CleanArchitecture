@@ -3,7 +3,6 @@ using Api.Extensions.Proxy;
 using Api.Extensions.Resilience;
 using Api.Extensions.Session;
 using Domain.Interfaces;
-using Infrastructure.Middleware;
 using Infrastructure.Services.Database;
 using Infrastructure.Services.HealthCheck;
 using Infrastructure.Services.JsonSerializer;
@@ -15,32 +14,25 @@ using System.Threading.RateLimiting;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
-
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 // Custom service registrations
 builder.Services.AddProxyManager();
 builder.Services.AddConfigManager();
 builder.Services.AddSingleton<IFeatureToggleService, FeatureToggleService>();
-
 var tempProvider = builder.Services.BuildServiceProvider();
 var featureToggle = tempProvider.GetRequiredService<IFeatureToggleService>();
 var dbType = featureToggle.GetDatabaseProvider();
 builder.Services.AddDatabaseManager(dbType);
 builder.Services.AddSingleton<IHealthCheckable, DatabaseManager>();
-
 //builder.Services.AddLoggingManager("console");
 //builder.Services.AddLoggingManager("file");
 builder.Services.AddLoggingManager("composite");
 builder.Services.AddHttpContextSessionManager();
 builder.Services.AddResilienceServiceRegistration();
-
 builder.Services.AddSingleton<ICustomJsonSerializer, CustomJsonSerializer>();
 builder.Services.AddSingleton<IFeatureToggleService, FeatureToggleService>();
 builder.Services.AddSingleton<ISessionContextAccessor, SessionContextAccessor>();
-
-
-
 
 builder.Services.AddRateLimiter(options =>
 {
@@ -52,9 +44,6 @@ builder.Services.AddRateLimiter(options =>
         opt.QueueLimit = 5;
     });
 });
-
-
-
 
 // HttpClient + Proxy
 builder.Services.AddHttpClient<IProxyManager, ProxyManager>();
@@ -76,10 +65,7 @@ builder.Services.AddSession(options =>
     options.Cookie.IsEssential = true;
 });
 
-
-
 var app = builder.Build();
-
 
 await HealthCheckStartup.CheckAllManagersHealthAsync(app.Services);
 
@@ -90,9 +76,6 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-
-app.UseMiddleware<TraceIdMiddleware>();
-
 
 app.UseSession();
 
